@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: gocanpi
+  namespace: default
+  labels:
+    app: gocanpi
+spec:
+  selector:
+    matchLabels:
+      app: gocanpi
+
+  # DaemonSet defaults are already the right shape for hardware-bound work:
+  # maxUnavailable 1, maxSurge 0 — drain before surge. That's the setting a
+  # Deployment had to be corrected into (see 2.3c). Stated here explicitly
+  # because it is load-bearing: two pods must never hold can1 at once.
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
+
+  template:
+    metadata:
+      labels:
+        app: gocanpi
+    spec:
+      # SocketCAN sockets are scoped to a network namespace. Without this the
+      # container gets its own namespace, sees no can0/can1, and dies at bind.
+      hostNetwork: true
+      # Required whenever hostNetwork is set, or the pod uses the host's
+      # resolv.conf and loses in-cluster service discovery.
+      dnsPolicy: ClusterFirstWithHostNet
+
+      nodeSelector:
+        hardware: can
+      tolerations:
+        - key: hardware
+          operator: Equal
+          value: can
+          effect: NoSchedule
+
+      # Give SIGTERM time to land so the socket closes cleanly on rollout.
+      terminationGracePeriodSeconds: 15
+
+      containers:
+        - name: collector
+          # Bumped by the build; never use :latest — a rollout should be a
+          # real change and a rollback unambiguous.
+          image: 192.168.50.1:5000/gocanpi:REPLACE_ME
+          args:
+            - -ifaces=can1
+            - -listen=:9100
+            - -max-ids=256
+
+          ports:
+            - name: metrics
+              containerPort: 9100
+              hostPort: 9100
+
+          securityContext:
+            # NET_RAW is what opening an AF_CAN socket needs. NET_ADMIN would
+            # only be required if this process configured the interface too.
+            capabilities:
+              drop: ["ALL"]
+              add: ["NET_RAW"]
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+
+          # httpGet, not exec — a scratch image has no shell to exec into.
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 9100
+            initialDelaySeconds: 5
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 9100
+            initialDelaySeconds: 2
+            periodSeconds: 10
+
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
