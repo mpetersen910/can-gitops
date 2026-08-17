@@ -1,0 +1,68 @@
+# Traffic generator. Kept in its own manifest so it can be applied and
+# deleted independently — it's bench stimulus, not part of the real workload.
+#
+#   kubectl apply -f gencan-daemonset.yaml     # start synthetic traffic
+#   kubectl delete -f gencan-daemonset.yaml    # silence the bus
+#
+# Replaces `can-traffic.service` on canpi. Disable that first, or both will
+# transmit and the frame rates will double:
+#   sudo systemctl disable --now can-traffic
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: gencan
+  namespace: default
+  labels:
+    app: gencan
+spec:
+  selector:
+    matchLabels:
+      app: gencan
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
+  template:
+    metadata:
+      labels:
+        app: gencan
+    spec:
+      # Same reason as the collector: SocketCAN is network-namespace-scoped,
+      # so without this the container sees no can0 at all.
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+
+      nodeSelector:
+        hardware: can
+      tolerations:
+        - key: hardware
+          operator: Equal
+          value: can
+          effect: NoSchedule
+
+      terminationGracePeriodSeconds: 10
+
+      containers:
+        - name: gencan
+          image: 192.168.50.1:5000/gencan:REPLACE_ME
+          args:
+            - -iface=can0          # collector reads can1 via the physical loop
+            - -scale=1.0           # <1 speeds everything up
+            - -burst-every=60s     # periodic spike, gives the dashboard shape
+
+          # No ports: this one only transmits. Nothing to scrape, nothing to
+          # probe — which is also why it has no liveness/readiness probe.
+          securityContext:
+            capabilities:
+              drop: ["ALL"]
+              add: ["NET_RAW"]
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+
+          resources:
+            requests:
+              cpu: 20m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
