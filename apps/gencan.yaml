@@ -48,7 +48,7 @@ spec:
           image: 192.168.50.1:5000/gencan:1f6ce0e
           args:
             - -iface=can0          # collector reads can1 via the physical loop
-            - -scale=1.0           # <1 speeds everything up
+            - -scale=0.5           # <1 speeds everything up
             - -burst-every=60s     # periodic spike, gives the dashboard shape
 
           # No ports: this one only transmits. Nothing to scrape, nothing to
