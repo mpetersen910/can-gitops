@@ -47,7 +47,7 @@ spec:
         - name: collector
           # Bumped by the build; never use :latest — a rollout should be a
           # real change and a rollback unambiguous.
-          image: 192.168.50.1:5000/gocanpi:REPLACE_ME
+          image: 192.168.50.1:5000/gocanpi:1f6ce0e
           args:
             - -ifaces=can1
             - -listen=:9100

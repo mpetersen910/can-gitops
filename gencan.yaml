@@ -45,7 +45,7 @@ spec:
 
       containers:
         - name: gencan
-          image: 192.168.50.1:5000/gencan:REPLACE_ME
+          image: 192.168.50.1:5000/gencan:1f6ce0e
           args:
             - -iface=can0          # collector reads can1 via the physical loop
             - -scale=1.0           # <1 speeds everything up
