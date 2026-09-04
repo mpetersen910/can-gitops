@@ -1,0 +1,98 @@
+# clusters/bench/image-automation.yaml
+#
+# Five resources. Two images means two ImageRepository + ImagePolicy pairs;
+# one ImageUpdateAutomation covers both.
+#
+# PREREQUISITE: build.sh must emit sortable tags before this does anything.
+# Git SHAs have no ordering, so Flux can't tell which is newest. Change it to:
+#     SHA=$(git rev-parse --short HEAD)
+#     TAG="main-${SHA}-$(date +%s)"
+# and tag both images with $TAG. Existing 1f6ce0e tags will NOT match the
+# filterTags pattern below and are simply ignored.
+
+---
+# Scans the registry for available tags of the collector image.
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: gocanpi
+  namespace: flux-system
+spec:
+  image: 192.168.50.1:5000/gocanpi
+  interval: 1m
+  # Required. The bench registry is plain HTTP; without this Flux refuses
+  # to scan and reports a TLS error that reads like a cert problem.
+  insecure: true
+
+---
+# Decides which of the scanned tags is "latest".
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: gocanpi
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: gocanpi
+  filterTags:
+    # Matches main-<sha>-<unix-timestamp>, captures the timestamp as `ts`.
+    pattern: '^main-[a-fA-F0-9]+-(?P<ts>[0-9]+)$'
+    extract: '$ts'
+  policy:
+    numerical:
+      order: asc          # highest timestamp wins
+
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: gencan
+  namespace: flux-system
+spec:
+  image: 192.168.50.1:5000/gencan
+  interval: 1m
+  insecure: true
+
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: gencan
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: gencan
+  filterTags:
+    pattern: '^main-[a-fA-F0-9]+-(?P<ts>[0-9]+)$'
+    extract: '$ts'
+  policy:
+    numerical:
+      order: asc
+
+---
+# Rewrites marked image lines in ./apps and commits the change back to git.
+# One of these covers every policy — you don't need one per image.
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImageUpdateAutomation
+metadata:
+  name: bench
+  namespace: flux-system
+spec:
+  interval: 1m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system      # created by bootstrap; points at can-gitops
+  git:
+    checkout:
+      ref:
+        branch: main
+    commit:
+      author:
+        email: flux@bench.local
+        name: fluxbot
+      messageTemplate: 'chore: update image tags'
+    push:
+      branch: main
+  update:
+    path: ./apps           # only touches manifests under apps/
+    strategy: Setters      # rewrites lines carrying an $imagepolicy marker

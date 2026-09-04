@@ -45,7 +45,7 @@ spec:
 
       containers:
         - name: gencan
-          image: 192.168.50.1:5000/gencan:1f6ce0e
+          image: 192.168.50.1:5000/gencan:main-1f6ce0e-1755000000 # {"$imagepolicy": "flux-system:gencan"}
           args:
             - -iface=can0          # collector reads can1 via the physical loop
             - -scale=0.5           # <1 speeds everything up

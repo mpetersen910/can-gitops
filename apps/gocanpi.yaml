@@ -47,7 +47,7 @@ spec:
         - name: collector
           # Bumped by the build; never use :latest — a rollout should be a
           # real change and a rollback unambiguous.
-          image: 192.168.50.1:5000/gocanpi:1f6ce0e
+          image: 192.168.50.1:5000/gocanpi:main-1f6ce0e-1755000000 # {"$imagepolicy": "flux-system:gocanpi"}
           args:
             - -ifaces=can1
             - -listen=:9100
