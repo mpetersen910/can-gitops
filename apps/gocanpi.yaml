@@ -52,6 +52,11 @@ spec:
             - -ifaces=can1
             - -listen=:9100
             - -max-ids=256
+            # What a spec sheet would say about gencan's schedule. The periods
+            # assume gencan -scale=0.5; at 1.0 they are 10ms, 100ms, 50ms, 1s.
+            - -periods=100:5ms,200:50ms,300:25ms,18DAF110:500ms
+            # 0x100 carries a 4-byte rolling counter in bytes 0-3.
+            - -counters=100:0-3
 
           ports:
             - name: metrics
