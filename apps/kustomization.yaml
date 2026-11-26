@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - gocanpi.yaml
   - gencan.yaml
+  - gencan-burst.yaml

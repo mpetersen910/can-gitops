@@ -47,9 +47,9 @@ spec:
         - name: gencan
           image: 192.168.50.1:5000/gencan:main-1f6ce0e-1755000000 # {"$imagepolicy": "flux-system:gencan"}
           args:
+            - -mode=standard
             - -iface=can0          # collector reads can1 via the physical loop
-            - -scale=0.5           # <1 speeds everything up
-            - -burst-every=60s     # periodic spike, gives the dashboard shape
+            - -scale=0.5           # <1 speeds everything up; colcan's -periods assume 0.5
 
           # No ports: this one only transmits. Nothing to scrape, nothing to
           # probe — which is also why it has no liveness/readiness probe.
