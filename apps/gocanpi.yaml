@@ -55,12 +55,9 @@ spec:
             - -ifaces=can0,can1
             - -listen=:9100
             - -max-ids=256
+            # Baked into the image from gocanpi's catalog/bench.yaml, so a
+            # catalog change arrives with a new image tag.
             - -catalog=/etc/colcan/catalog.yaml
-
-          volumeMounts:
-            - name: catalog
-              mountPath: /etc/colcan
-              readOnly: true
 
           ports:
             - name: metrics
@@ -96,11 +93,3 @@ spec:
               memory: 32Mi
             limits:
               memory: 128Mi
-
-      volumes:
-        # Generated from config/colcan-catalog.yaml by kustomization.yaml.
-        # The generated name carries a hash of the catalog, so editing the
-        # catalog rolls this DaemonSet.
-        - name: catalog
-          configMap:
-            name: colcan-catalog

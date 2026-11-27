@@ -7,8 +7,8 @@
 # so temperature frames keep getting out during a pulse while 0x100, stuck
 # in can0's own queue, does not.
 #
-# colcan watches it through the cabin_temp entry in config/colcan-catalog.yaml;
-# keep the two in step.
+# colcan watches it through the cabin_temp entry in gocanpi's
+# catalog/bench.yaml; keep the two in step.
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
