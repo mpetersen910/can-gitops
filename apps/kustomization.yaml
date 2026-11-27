@@ -4,3 +4,10 @@ resources:
   - gocanpi.yaml
   - gencan.yaml
   - gencan-burst.yaml
+  - gencan-event.yaml
+
+configMapGenerator:
+  - name: colcan-catalog
+    namespace: default
+    files:
+      - catalog.yaml=config/colcan-catalog.yaml

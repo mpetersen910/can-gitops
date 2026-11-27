@@ -13,7 +13,7 @@ spec:
   # DaemonSet defaults are already the right shape for hardware-bound work:
   # maxUnavailable 1, maxSurge 0 — drain before surge. That's the setting a
   # Deployment had to be corrected into (see 2.3c). Stated here explicitly
-  # because it is load-bearing: two pods must never hold can1 at once.
+  # because it is load-bearing: two pods must never hold can0/can1 at once.
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
@@ -49,14 +49,18 @@ spec:
           # real change and a rollback unambiguous.
           image: 192.168.50.1:5000/gocanpi:main-1f6ce0e-1755000000 # {"$imagepolicy": "flux-system:gocanpi"}
           args:
-            - -ifaces=can1
+            # Both nodes on this Pi transmit, and colcan drops what the Pi
+            # itself sent. Reading both interfaces means each frame is heard
+            # once, from the wire, by the reader on the other node.
+            - -ifaces=can0,can1
             - -listen=:9100
             - -max-ids=256
-            # What a spec sheet would say about gencan's schedule. The periods
-            # assume gencan -scale=0.5; at 1.0 they are 10ms, 100ms, 50ms, 1s.
-            - -periods=100:5ms,200:50ms,300:25ms,18DAF110:500ms
-            # 0x100 carries a 4-byte rolling counter in bytes 0-3.
-            - -counters=100:0-3
+            - -catalog=/etc/colcan/catalog.yaml
+
+          volumeMounts:
+            - name: catalog
+              mountPath: /etc/colcan
+              readOnly: true
 
           ports:
             - name: metrics
@@ -92,3 +96,11 @@ spec:
               memory: 32Mi
             limits:
               memory: 128Mi
+
+      volumes:
+        # Generated from config/colcan-catalog.yaml by kustomization.yaml.
+        # The generated name carries a hash of the catalog, so editing the
+        # catalog rolls this DaemonSet.
+        - name: catalog
+          configMap:
+            name: colcan-catalog
