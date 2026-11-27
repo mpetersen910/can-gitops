@@ -4,3 +4,4 @@ resources:
   - gocanpi.yaml
   - gencan.yaml
   - gencan-burst.yaml
+  - gencan-event.yaml

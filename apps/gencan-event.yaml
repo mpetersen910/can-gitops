@@ -1,0 +1,71 @@
+# Event sender: a simulated on-change temperature sensor (0x400) on can1.
+#
+# It transmits when the reading moves by the deadband, no sooner than the
+# minimum gap and at least once per heartbeat, so its frames arrive at
+# irregular intervals. This is the second node on the bus: its frames
+# compete with can0's in arbitration. 0x400 outranks gencan-burst's 0x7FF,
+# so temperature frames keep getting out during a pulse while 0x100, stuck
+# in can0's own queue, does not.
+#
+# colcan watches it through the cabin_temp entry in gocanpi's
+# catalog/bench.yaml; keep the two in step.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: gencan-event
+  namespace: default
+  labels:
+    app: gencan-event
+spec:
+  selector:
+    matchLabels:
+      app: gencan-event
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
+  template:
+    metadata:
+      labels:
+        app: gencan-event
+    spec:
+      # SocketCAN is network-namespace-scoped; without this there is no can1.
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+
+      nodeSelector:
+        hardware: can
+      tolerations:
+        - key: hardware
+          operator: Equal
+          value: can
+          effect: NoSchedule
+
+      terminationGracePeriodSeconds: 10
+
+      containers:
+        - name: gencan
+          image: 192.168.50.1:5000/gencan:main-1f6ce0e-1755000000 # {"$imagepolicy": "flux-system:gencan"}
+          args:
+            - -mode=event
+            - -iface=can1
+            - -event-id=400
+            - -event-deadband=0.5
+            - -event-min-gap=100ms
+            - -event-heartbeat=5s
+
+          # Transmit only: nothing to scrape or probe. Logs one line per frame.
+          securityContext:
+            capabilities:
+              drop: ["ALL"]
+              add: ["NET_RAW"]
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+
+          resources:
+            requests:
+              cpu: 20m
+              memory: 16Mi
+            limits:
+              memory: 64Mi

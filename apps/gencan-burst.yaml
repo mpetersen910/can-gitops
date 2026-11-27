@@ -7,7 +7,7 @@
 # missing frames on the schedule's IDs.
 #
 # Never give this an ID the standard schedule uses: arbitration can't separate
-# two senders on the same ID. Part 2 moves this to can1.
+# two senders on the same ID. The competing node on can1 is gencan-event.
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
